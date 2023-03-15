@@ -110,6 +110,6 @@
     "@remix-run/node": "1.x"
   },
   "dependencies": {
-    "jose": "^4.13.0"
+    "jose": "^4.13.1"
   }
 }
