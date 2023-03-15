@@ -22,7 +22,7 @@ function walk<Obj, S extends boolean = false>(obj: Obj, shallow = false): any {
     return obj;
   }
   if (Array.isArray(obj)) {
-    return obj.map(v => shallow ? v : walk(v), shallow);
+    return obj.map(v => typeof v === 'string' ? camelCase(v) : walk(v));
   }
 
   return objectKeys(obj).reduce((res, key) => {

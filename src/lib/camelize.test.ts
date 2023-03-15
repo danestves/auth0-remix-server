@@ -7,6 +7,10 @@ describe('camelize', () => {
     expect(camelize('camel_case_me')).toEqual('camelCaseMe');
   });
 
+  it('should camelize array', () => {
+    expect(camelize(['camel_case_me'])).toEqual(['camelCaseMe']);
+  });
+
   it('should deeply camelize object', () => {
     const date = new Date('2020-01-01');
     const regex = /something/;
