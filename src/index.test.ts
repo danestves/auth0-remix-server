@@ -1,10 +1,11 @@
 /* eslint-disable max-nested-callbacks */
-import type { AppLoadContext } from '@remix-run/node';
 import { redirect } from '@remix-run/node';
 import * as jose from 'jose';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Auth0RemixServer, Token } from './index.js';
 import { getCredentials, saveUserToSession } from './lib/session.js';
+import { fromAny, fromPartial } from '@total-typescript/mock-utils';
+import type { AppLoadContext } from '@remix-run/node';
 import type { Auth0RemixOptions } from './Auth0RemixTypes.js';
 
 vi.mock('@remix-run/node');
@@ -29,9 +30,9 @@ describe('Auth0 Remix Server', () => {
     vi.setSystemTime(0);
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(redirect).mockImplementation(() => {
-      throw new Error(redirectError as never);
+      throw new Error(redirectError);
     });
-    vi.mocked(jose.createRemoteJWKSet).mockReturnValue('jwkSet' as never);
+    vi.mocked(jose.createRemoteJWKSet).mockReturnValue(fromAny('jwkSet'));
     context.appLoadContext = {};
     context.authOptions = {
       clientDetails: {
@@ -40,9 +41,9 @@ describe('Auth0 Remix Server', () => {
         clientSecret: 'clientSecret'
       },
       refreshTokenRotationEnabled: false,
-      session: {
-        store: {} as never
-      },
+      session: fromPartial({
+        store: {}
+      }),
       callbackURL: 'http://localhost:3000/auth0/callback',
       failedLoginRedirect: '/logout'
     };
@@ -102,11 +103,15 @@ describe('Auth0 Remix Server', () => {
     });
 
     describe('when there is a code in the exchange', () => {
-      it<LocalTestContext>('redirects to the failed login url if the token exchange fails', async ({ authOptions }) => {
+      it<LocalTestContext>('redirects to the failed login url if the token exchange fails', async ({
+        authOptions
+      }) => {
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-        vi.mocked(fetch).mockResolvedValue({
-          ok: false // return a non-ok response
-        } as never);
+        vi.mocked(fetch).mockResolvedValue(
+          fromPartial({
+            ok: false // return a non-ok response
+          })
+        );
 
         const authorizer = new Auth0RemixServer(authOptions);
         const formData = new FormData();
@@ -136,10 +141,12 @@ describe('Auth0 Remix Server', () => {
             expires_in: 30,
             refresh_token: 'test-refresh-token'
           };
-          vi.mocked(fetch).mockResolvedValue({
-            ok: true, // return a non-ok response
-            json: () => Promise.resolve(auth0Response)
-          } as never);
+          vi.mocked(fetch).mockResolvedValue(
+            fromPartial({
+              ok: true, // return a non-ok response
+              json: () => Promise.resolve(auth0Response)
+            })
+          );
 
           const formData = new FormData();
           formData.append('code', 'test-code');
@@ -161,7 +168,9 @@ describe('Auth0 Remix Server', () => {
           `);
         });
 
-        it<LocalTestContext>('includes the refresh token if the rotation is set', async ({ authOptions }) => {
+        it<LocalTestContext>('includes the refresh token if the rotation is set', async ({
+          authOptions
+        }) => {
           authOptions.refreshTokenRotationEnabled = true;
           const auth0Response = {
             access_token: 'test-access-token2',
@@ -170,10 +179,12 @@ describe('Auth0 Remix Server', () => {
             refresh_token: 'test-refresh-token2'
           };
 
-          vi.mocked(fetch).mockResolvedValue({
-            ok: true, // return a non-ok response
-            json: () => Promise.resolve(auth0Response)
-          } as never);
+          vi.mocked(fetch).mockResolvedValue(
+            fromPartial({
+              ok: true, // return a non-ok response
+              json: () => Promise.resolve(auth0Response)
+            })
+          );
 
           const formData = new FormData();
           formData.append('code', 'test-code');
@@ -200,19 +211,21 @@ describe('Auth0 Remix Server', () => {
       describe('and there is a success url', () => {
         it<LocalTestContext>('redirects to the success url', async ({ authOptions }) => {
           authOptions.session = {
-            store: 'sessionStore',
+            store: fromPartial({}),
             key: 'sessionKey'
-          } as never;
+          };
           const auth0Response = {
             access_token: 'test-access-token3',
             id_token: 'test-id-token3',
             expires_in: 300,
             refresh_token: 'test-refresh-token3'
           };
-          vi.mocked(fetch).mockResolvedValue({
-            ok: true, // return a non-ok response
-            json: () => Promise.resolve(auth0Response)
-          } as never);
+          vi.mocked(fetch).mockResolvedValue(
+            fromPartial({
+              ok: true, // return a non-ok response
+              json: () => Promise.resolve(auth0Response)
+            })
+          );
 
           const formData = new FormData();
           formData.append('code', 'test-code');
@@ -226,9 +239,11 @@ describe('Auth0 Remix Server', () => {
           });
 
           const authorizer = new Auth0RemixServer(authOptions);
-          await expect(authorizer.handleCallback(request, {
-            onSuccessRedirect: 'https://success-login-redirect.com'
-          })).rejects.toThrowError(redirectError); // a redirect happened
+          await expect(
+            authorizer.handleCallback(request, {
+              onSuccessRedirect: 'https://success-login-redirect.com'
+            })
+          ).rejects.toThrowError(redirectError); // a redirect happened
 
           const saveUserToSessionArgs = vi.mocked(saveUserToSession).mock.calls[0];
           expect(saveUserToSessionArgs[0]).toBe(request);
@@ -253,16 +268,15 @@ describe('Auth0 Remix Server', () => {
               },
             }
           `);
-
         });
 
         it<LocalTestContext>('calls the token escape hatch', async ({ authOptions }) => {
           const escapeHatch = vi.fn();
 
           authOptions.session = {
-            store: 'sessionStore',
+            store: fromAny('sessionStore'),
             key: 'sessionKey'
-          } as never;
+          };
           authOptions.credentialsCallback = escapeHatch;
           const auth0Response = {
             access_token: 'test-access-token4',
@@ -271,10 +285,10 @@ describe('Auth0 Remix Server', () => {
             refresh_token: 'test-refresh-token4'
           };
 
-          vi.mocked(fetch).mockResolvedValue({
+          vi.mocked(fetch).mockResolvedValue(fromPartial({
             ok: true, // return a non-ok response
             json: () => Promise.resolve(auth0Response)
-          } as never);
+          }));
 
           const formData = new FormData();
           formData.append('code', 'test-code');
@@ -337,8 +351,9 @@ describe('Auth0 Remix Server', () => {
   describe('getting the user', () => {
     describe('when there are no credentials returned', () => {
       it<LocalTestContext>('redirects to the failed login url', async ({ authOptions }) => {
-        vi.mocked(getCredentials).mockResolvedValueOnce(undefined as never);
+        vi.mocked(getCredentials).mockResolvedValueOnce(null);
 
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         const request = new Request('https://it-doesnt-matter.com');
@@ -349,30 +364,35 @@ describe('Auth0 Remix Server', () => {
         expect(consoleSpy).toHaveBeenCalledWith('No credentials found');
       });
     });
+
     describe('when the access token is valid', () => {
       beforeEach(() => {
-        vi.mocked(getCredentials).mockResolvedValueOnce({
-          accessToken: 'test-access-token'
-        } as never);
-        vi.mocked(jose.jwtVerify).mockResolvedValue({} as never);
+        vi.mocked(getCredentials).mockResolvedValueOnce(
+          fromPartial({
+            accessToken: 'test-access-token'
+          })
+        );
+        vi.mocked(jose.jwtVerify).mockResolvedValue(fromPartial({}));
       });
 
       describe('and the user profile fetch succeeds', () => {
         it<LocalTestContext>('returns the user', async ({ authOptions }) => {
           authOptions.session = {
-            store: 'sessionStore',
+            store: fromPartial({}),
             key: 'sessionKey'
-          } as never;
+          };
 
           const user = {
             name: 'test-user',
             first_name: 'test-first-name'
           };
 
-          vi.mocked(fetch).mockResolvedValue({
-            ok: true,
-            json: () => Promise.resolve(user)
-          } as never);
+          vi.mocked(fetch).mockResolvedValue(
+            fromPartial({
+              ok: true,
+              json: () => Promise.resolve(user)
+            })
+          );
 
           const request = new Request('https://it-doesnt-matter.com');
 
@@ -413,14 +433,17 @@ describe('Auth0 Remix Server', () => {
       describe('and the user profile fetch fails', () => {
         it<LocalTestContext>('redirects to the failed url', async ({ authOptions }) => {
           authOptions.session = {
-            store: 'sessionStore',
+            store: fromPartial({}),
             key: 'sessionKey'
-          } as never;
+          };
 
-          vi.mocked(fetch).mockResolvedValue({
-            ok: false
-          } as never);
+          vi.mocked(fetch).mockResolvedValue(
+            fromPartial({
+              ok: false
+            })
+          );
 
+          // eslint-disable-next-line @typescript-eslint/no-empty-function
           const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
           const request = new Request('https://it-doesnt-matter.com');
@@ -434,9 +457,10 @@ describe('Auth0 Remix Server', () => {
 
     describe('when the token validation fails', () => {
       it<LocalTestContext>('redirects to the failed login url', async ({ authOptions }) => {
-        vi.mocked(getCredentials).mockResolvedValueOnce({} as never);
+        vi.mocked(getCredentials).mockResolvedValueOnce(fromPartial({}));
         vi.mocked(jose.jwtVerify).mockRejectedValue(new Error('test-error'));
 
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         const request = new Request('https://it-doesnt-matter.com');
@@ -459,62 +483,88 @@ describe('Auth0 Remix Server', () => {
         });
         describe('and there is no refresh token', () => {
           beforeEach(() => {
-            vi.mocked(getCredentials).mockResolvedValue({} as never);
+            vi.mocked(getCredentials).mockResolvedValue(fromPartial({}));
           });
 
-          it<LocalTestContext>('redirects to the failed login url', async ({ authOptions, appLoadContext }) => {
+          it<LocalTestContext>('redirects to the failed login url', async ({
+            authOptions,
+            appLoadContext
+          }) => {
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
             const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             const request = new Request('https://it-doesnt-matter.com');
 
             const authorizer = new Auth0RemixServer(authOptions);
-            await expect(authorizer.getUser(request, appLoadContext)).rejects.toThrowError(redirectError); // a redirect happened
-            expect(consoleSpy).toHaveBeenCalledWith('No refresh token found within the credentials.');
+            await expect(authorizer.getUser(request, appLoadContext)).rejects.toThrowError(
+              redirectError
+            ); // a redirect happened
+            expect(consoleSpy).toHaveBeenCalledWith(
+              'No refresh token found within the credentials.'
+            );
           });
         });
 
         describe('and there is a refresh token', () => {
           beforeEach(() => {
-            vi.mocked(getCredentials).mockResolvedValue({
-              refreshToken: 'test-refresh-token'
-            } as never);
+            vi.mocked(getCredentials).mockResolvedValue(
+              fromPartial({
+                refreshToken: 'test-refresh-token'
+              })
+            );
           });
 
-          it<LocalTestContext>('redirects to the failed login url when the refresh fails', async ({ authOptions, appLoadContext }) => {
-            vi.mocked(fetch).mockResolvedValue({
-              ok: false
-            } as never);
+          it<LocalTestContext>('redirects to the failed login url when the refresh fails', async ({
+            authOptions,
+            appLoadContext
+          }) => {
+            vi.mocked(fetch).mockResolvedValue(
+              fromPartial({
+                ok: false
+              })
+            );
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
             const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             const request = new Request('https://it-doesnt-matter.com');
 
             const authorizer = new Auth0RemixServer(authOptions);
-            await expect(authorizer.getUser(request, appLoadContext)).rejects.toThrowError(redirectError); // a redirect happened
+            await expect(authorizer.getUser(request, appLoadContext)).rejects.toThrowError(
+              redirectError
+            ); // a redirect happened
             expect(consoleSpy).toHaveBeenCalledWith('Failed to refresh token from Auth0');
           });
 
-          it<LocalTestContext>('returns the correct credentials with the rotation off', async ({ authOptions, appLoadContext }) => {
-            vi.mocked(fetch).mockResolvedValue({
-              ok: true,
-              json: () => Promise.resolve({
-                access_token: 'new-access-token',
-                refresh_token: 'new-refresh-token',
-                expires_in: 1000
+          it<LocalTestContext>('returns the correct credentials with the rotation off', async ({
+            authOptions,
+            appLoadContext
+          }) => {
+            vi.mocked(fetch).mockResolvedValue(
+              fromPartial({
+                ok: true,
+                json: () =>
+                  Promise.resolve({
+                    access_token: 'new-access-token',
+                    refresh_token: 'new-refresh-token',
+                    expires_in: 1000
+                  })
               })
-            } as never);
+            );
 
             vi.mocked(saveUserToSession).mockResolvedValueOnce({
               'a-header': 'a-value'
-            } as never);
+            });
 
             const request = new Request('https://it-doesnt-matter.com');
             authOptions.refreshTokenRotationEnabled = false;
             authOptions.session = {
-              store: 'sessionStore',
+              store: fromPartial({}),
               key: 'sessionKey'
-            } as never;
+            };
             const authorizer = new Auth0RemixServer(authOptions);
 
             /** Execute the test */
-            await expect(authorizer.getUser(request, appLoadContext)).rejects.toThrowError(redirectError); // a redirect happened
+            await expect(authorizer.getUser(request, appLoadContext)).rejects.toThrowError(
+              redirectError
+            ); // a redirect happened
 
             expect(appLoadContext.refresh).toBeDefined(); // it sets the context properly
 
@@ -558,29 +608,36 @@ describe('Auth0 Remix Server', () => {
                 'a-header': 'a-value'
               }
             });
-
           });
 
-          it<LocalTestContext>('returns the correct credentials with the rotation on', async ({ authOptions, appLoadContext }) => {
-            vi.mocked(fetch).mockResolvedValue({
-              ok: true,
-              json: () => Promise.resolve({
-                access_token: 'new-access-token2',
-                refresh_token: 'new-refresh-token2',
-                expires_in: 3000
+          it<LocalTestContext>('returns the correct credentials with the rotation on', async ({
+            authOptions,
+            appLoadContext
+          }) => {
+            vi.mocked(fetch).mockResolvedValue(
+              fromPartial({
+                ok: true,
+                json: () =>
+                  Promise.resolve({
+                    access_token: 'new-access-token2',
+                    refresh_token: 'new-refresh-token2',
+                    expires_in: 3000
+                  })
               })
-            } as never);
+            );
 
             vi.mocked(saveUserToSession).mockResolvedValueOnce({
               'a-header2': 'a-value2'
-            } as never);
+            });
 
             const request = new Request('https://it-doesnt-matter.com');
             authOptions.refreshTokenRotationEnabled = true;
             const authorizer = new Auth0RemixServer(authOptions);
 
             /** Execute the test */
-            await expect(authorizer.getUser(request, appLoadContext)).rejects.toThrowError(redirectError); // a redirect happened
+            await expect(authorizer.getUser(request, appLoadContext)).rejects.toThrowError(
+              redirectError
+            ); // a redirect happened
 
             expect(appLoadContext.refresh).toBeDefined(); // it sets the context properly
 
@@ -599,23 +656,22 @@ describe('Auth0 Remix Server', () => {
               }
             `);
             expect(Object.keys(saveUserToSessionCall[1])).toContain('refreshToken');
-
           });
 
           it<LocalTestContext>('calls the credentials escape hatch callback', async ({ authOptions, appLoadContext }) => {
             const escapeHatch = vi.fn();
-            vi.mocked(fetch).mockResolvedValue({
+            vi.mocked(fetch).mockResolvedValue(fromPartial({
               ok: true,
               json: () => Promise.resolve({
                 access_token: 'new-access-token3',
                 refresh_token: 'new-refresh-token3',
                 expires_in: 3000
               })
-            } as never);
+            }));
 
             vi.mocked(saveUserToSession).mockResolvedValueOnce({
               'a-header2': 'a-value2'
-            } as never);
+            });
 
             const request = new Request('https://it-doesnt-matter.com');
             authOptions.refreshTokenRotationEnabled = true;
@@ -636,15 +692,17 @@ describe('Auth0 Remix Server', () => {
           });
 
           it<LocalTestContext>('returns the user when there is an ongoing refresh', async ({ authOptions }) => {
+            vi.mocked(jose.jwtVerify).mockResolvedValueOnce(fromPartial({})); // this will be the second call after the one in the beforeEach
 
-            vi.mocked(jose.jwtVerify).mockResolvedValueOnce({} as never); // this will be the second call after the one in the beforeEach
-
-            vi.mocked(fetch).mockResolvedValue({
-              ok: true,
-              json: () => Promise.resolve({
-                name: 'test-user'
+            vi.mocked(fetch).mockResolvedValue(
+              fromPartial({
+                ok: true,
+                json: () =>
+                  Promise.resolve({
+                    name: 'test-user'
+                  })
               })
-            } as never);
+            );
 
             const request = new Request('https://it-doesnt-matter.com');
 
@@ -664,7 +722,7 @@ describe('Auth0 Remix Server', () => {
 
   describe('the verification functions', () => {
     it<LocalTestContext>('can successfully verify an access token', async ({ authOptions }) => {
-      vi.mocked(jose.jwtVerify).mockResolvedValueOnce({} as never);
+      vi.mocked(jose.jwtVerify).mockResolvedValueOnce(fromPartial({}));
       authOptions.clientDetails.domain = 'test.domain.com';
       authOptions.clientDetails.audience = 'verification-audience';
       const authorizer = new Auth0RemixServer(authOptions);
@@ -679,7 +737,7 @@ describe('Auth0 Remix Server', () => {
     });
 
     it<LocalTestContext>('can report a failed access token validity', async ({ authOptions }) => {
-      vi.mocked(jose.jwtVerify).mockRejectedValueOnce({} as never);
+      vi.mocked(jose.jwtVerify).mockRejectedValueOnce(new jose.errors.JOSEError());
       authOptions.clientDetails.domain = 'test.domain.com';
       authOptions.clientDetails.audience = 'verification-audience';
       const authorizer = new Auth0RemixServer(authOptions);
@@ -694,7 +752,7 @@ describe('Auth0 Remix Server', () => {
     });
 
     it<LocalTestContext>('can successfully verify an id token', async ({ authOptions }) => {
-      vi.mocked(jose.jwtVerify).mockResolvedValueOnce({} as never);
+      vi.mocked(jose.jwtVerify).mockResolvedValueOnce(fromPartial({}));
       authOptions.clientDetails.domain = 'test.domain.com';
       authOptions.clientDetails.clientID = 'verification-clientID';
       const authorizer = new Auth0RemixServer(authOptions);
@@ -709,7 +767,7 @@ describe('Auth0 Remix Server', () => {
     });
 
     it<LocalTestContext>('can report a failed id token validity', async ({ authOptions }) => {
-      vi.mocked(jose.jwtVerify).mockRejectedValueOnce({} as never);
+      vi.mocked(jose.jwtVerify).mockRejectedValueOnce(new jose.errors.JOSEError());
       authOptions.clientDetails.domain = 'test.domain.com';
       authOptions.clientDetails.clientID = 'verification-clientID';
       const authorizer = new Auth0RemixServer(authOptions);
@@ -746,12 +804,12 @@ describe('Auth0 Remix Server', () => {
       authOptions.clientDetails.domain = 'test.domain.com';
       authOptions.clientDetails.audience = 'verification-audience';
 
-      vi.mocked(jose.jwtVerify).mockResolvedValueOnce({
+      vi.mocked(jose.jwtVerify).mockResolvedValueOnce(fromPartial({
         payload: {
           sub: 'test-subject',
           aud: 'verification-audience'
         }
-      } as never);
+      }));
 
       const authorizer = new Auth0RemixServer(authOptions);
       const actual = await authorizer.decodeToken('test-token', Token.ACCESS);
@@ -771,12 +829,12 @@ describe('Auth0 Remix Server', () => {
       authOptions.clientDetails.domain = 'test.domain.com';
       authOptions.clientDetails.clientID = 'verification-clientID';
 
-      vi.mocked(jose.jwtVerify).mockResolvedValueOnce({
+      vi.mocked(jose.jwtVerify).mockResolvedValueOnce(fromPartial({
         payload: {
           sub: 'test-subject',
           name: 'test-name'
         }
-      } as never);
+      }));
 
       const authorizer = new Auth0RemixServer(authOptions);
       const actual = await authorizer.decodeToken('test-token', Token.ID);

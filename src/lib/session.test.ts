@@ -1,6 +1,7 @@
 import { createSession } from '@remix-run/node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCredentials, saveUserToSession } from './session.js';
+import { fromPartial } from '@total-typescript/mock-utils';
 import type { SessionStore, UserCredentials } from '../Auth0RemixTypes.js';
 
 describe('The session helper', () => {
@@ -12,21 +13,23 @@ describe('The session helper', () => {
     it('should return the credentials from the session cookie', async () => {
       const request = new Request('https://example.com', {
         headers: {
-          'Cookie': 'session-cookie'
+          Cookie: 'session-cookie'
         }
       });
-      const userCredentials: UserCredentials = {} as never;
+      const userCredentials: UserCredentials = fromPartial({});
       const sessionStore: SessionStore = {
-        store: {
+        store: fromPartial({
           getSession: vi.fn(),
           commitSession: vi.fn()
-        } as never,
+        }),
         key: 'session-key'
       };
       const session = createSession();
       const sessionSpy = vi.spyOn(session, 'set');
       vi.mocked(sessionStore.store.getSession).mockResolvedValue(session);
-      vi.mocked(sessionStore.store.commitSession).mockResolvedValue('session-cookie-setcookie-string');
+      vi.mocked(sessionStore.store.commitSession).mockResolvedValue(
+        'session-cookie-setcookie-string'
+      );
 
       const actual = await saveUserToSession(request, userCredentials, sessionStore);
       expect(actual).toMatchInlineSnapshot(`
@@ -43,16 +46,19 @@ describe('The session helper', () => {
     it('should return empty headers if there is no session management', async () => {
       const request = new Request('https://example.com', {
         headers: {
-          'Cookie': 'session-cookie'
+          Cookie: 'session-cookie'
         }
       });
-      const userCredentials: UserCredentials = {} as never;
+      const userCredentials: UserCredentials = fromPartial({});
       const sessionStore = undefined;
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const actual = await saveUserToSession(request, userCredentials, sessionStore);
       expect(actual).toEqual({});
-      expect(consoleSpy).toHaveBeenCalledWith('No session storage configured. User credentials will not be persisted.');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'No session storage configured. User credentials will not be persisted.'
+      );
     });
   });
 
@@ -60,17 +66,17 @@ describe('The session helper', () => {
     it('should return the credentials from the session cookie', async () => {
       const request = new Request('https://example.com', {
         headers: {
-          'Cookie': 'session-cookie'
+          Cookie: 'session-cookie'
         }
       });
       const sessionStore: SessionStore = {
-        store: {
+        store: fromPartial({
           getSession: vi.fn()
-        } as never,
+        }),
         key: 'session-key'
       };
       const session = createSession();
-      const credentialResult:UserCredentials = {
+      const credentialResult: UserCredentials = {
         accessToken: 'access-token',
         expiresAt: 1000,
         expiresIn: 100,
