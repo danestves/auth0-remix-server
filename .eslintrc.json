@@ -20,7 +20,8 @@
     "no-console": "off",
     "no-else-return": "off",
     "no-unused-expressions": "off",
-    "max-nested-callbacks": ["error", 4]
+    "max-nested-callbacks": ["error", 4],
+    "no-use-before-define": "off"
   },
   "env": {
     "commonjs": false,

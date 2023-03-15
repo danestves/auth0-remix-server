@@ -1,6 +1,7 @@
 import type { SessionStorage } from '@remix-run/node';
 import type { errors as JoseErrors } from 'jose';
 import type { JsonObject, JsonValue, SetOptional } from 'type-fest';
+import type { Camelize, CamelCase } from './lib/camelize.js';
 
 export type TokenError = JoseErrors.JOSEError;
 
@@ -55,7 +56,7 @@ export interface UserProfile {
     country: string;
   };
   updatedAt: string;
-  [key: string]: JsonValue;
+  [key: CamelCase<string>]: Camelize<JsonValue>;
 }
 
 export interface ClientCredentials {
